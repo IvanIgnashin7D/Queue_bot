@@ -81,6 +81,7 @@ async def publish_queue_job(message: Message, queue_id: int):
         parse_mode="HTML",
     )
     await update_queue_message_id(id=queue_id, message_id=msg.message_id)
+    await msg.pin(disable_notification=True)
 
 
 @router.callback_query(F.data.startswith("enter_queue_"))

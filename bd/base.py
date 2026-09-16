@@ -1,12 +1,12 @@
-from sqlalchemy import BigInteger, Engine, ForeignKey, Integer, String, event
+from sqlalchemy import BigInteger, ForeignKey, Integer, String, event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-engine = create_async_engine("sqlite+aiosqlite:///test.db", echo=False)
+engine = create_async_engine("sqlite+aiosqlite:///bot.db", echo=False)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
-@event.listens_for(Engine, "connect")
+@event.listens_for(engine.sync_engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
@@ -15,7 +15,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 async def init_db():
     async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        # await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
 
