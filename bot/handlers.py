@@ -67,7 +67,6 @@ async def new_queue_handler(message: Message):
         topic_id=message.message_thread_id,
         open_time=open_time[1],
         name=name,
-        opened=False,
     )
 
     if not queue:

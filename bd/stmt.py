@@ -16,7 +16,6 @@ async def create_new_queue(
     creator_id: int,
     open_time: datetime,
     name: str,
-    opened: bool,
     topic_id: int | None = None,
 ) -> Queue:
     async with async_session() as session:
@@ -31,7 +30,6 @@ async def create_new_queue(
             creator_id=creator_id,
             open_time=open_time,
             name=name,
-            opened=opened,
         )
         session.add(new_queue)
         await session.commit()

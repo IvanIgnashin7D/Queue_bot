@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, event
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -38,7 +38,6 @@ class Queue(Model):
     message_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     open_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     name: Mapped[str] = mapped_column(String(30), nullable=False)
-    opened: Mapped[bool] = mapped_column(Boolean, nullable=False)
 
 
 class User(Model):

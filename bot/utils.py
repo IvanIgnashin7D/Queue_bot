@@ -41,8 +41,8 @@ async def create_new_text(queue_id: int) -> str:
 def create_queue_info_text(queue: Queue) -> str:
     new_text = (
         f"Очередь: <b>{queue.name}</b>\n"
-        f"Статус: {'Открыта' if queue.opened else 'Закрыта'}\n"
-        f"{f'Откроется с {queue.open_time.strftime('%H:%M')}' if not queue.opened else ''}"
+        f"Статус: {'Открыта' if queue.message_id else 'Закрыта'}\n"
+        f"{f'Откроется с {queue.open_time.strftime('%H:%M')}' if not queue.message_id else ''}"
     )
     return new_text
 
