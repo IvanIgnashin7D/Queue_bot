@@ -24,3 +24,17 @@ def create_kb_queue(queue_id: int) -> InlineKeyboardMarkup:
         ]
     )
     return kb_queue
+
+
+def create_kb_delete_queue(queue_id: int) -> InlineKeyboardMarkup:
+    kb_queue = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Удалить",
+                    callback_data=f"delete_queue_{queue_id}",
+                ),
+            ]
+        ]
+    )
+    return kb_queue

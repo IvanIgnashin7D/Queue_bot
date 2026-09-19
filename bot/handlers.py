@@ -1,21 +1,24 @@
 from datetime import datetime
 
 from aiogram import F, Router
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from bd.base import Queue
 from bd.stmt import (
     add_user,
     create_new_queue,
     delete_queue,
     delete_user,
+    get_queue_by_id,
     get_queues_by_chat,
     get_user,
     move_queue,
     update_queue_message_id_and_open,
 )
-from bot.keyboards import create_kb_queue
+from bot.keyboards import create_kb_delete_queue, create_kb_queue
 from bot.utils import (
     calculate_random_open_time,
     check_admin_status,
@@ -86,7 +89,7 @@ async def new_queue_handler(message: Message):
     )
 
 
-async def publish_queue_job(message: Message, queue: int):
+async def publish_queue_job(message: Message, queue: Queue):
     text = (
         "<b>Запись в очередь открыта!</b>\n\n"
         f"<i>{queue.name}</i>\n\n"
@@ -165,9 +168,29 @@ async def delete_queue_handler(callback_query):
         return
 
     queue_id = int(callback_query.data.split("_")[2])
+    queue = await get_queue_by_id(id=queue_id)
+
+    if not queue:
+        await callback_query.answer(
+            "Очередь уже удалена или не существует", show_alert=True
+        )
+        await callback_query.message.delete()
+        return
+
+    if queue.message_id and queue.message_id != callback_query.message.message_id:
+        try:
+            await callback_query.bot.delete_message(
+                chat_id=queue.chat_id, message_id=queue.message_id
+            )
+        except TelegramBadRequest as e:
+            print(f"Не удалось удалить оригинальный пост очереди: {e.message}")
+
     await delete_queue(id=queue_id)
     await callback_query.answer("Очередь удалена")
-    await callback_query.message.delete()
+    try:
+        await callback_query.message.delete()
+    except TelegramBadRequest:
+        pass
 
 
 @router.callback_query(F.data.startswith("move_queue_"))
@@ -203,5 +226,6 @@ async def get_all_queues(message: Message):
         return
 
     for queue in queues:
+        kb = create_kb_delete_queue(queue_id=queue.id)
         text = create_queue_info_text(queue)
-        await message.answer(text=text)
+        await message.answer(text=text, reply_markup=kb)
