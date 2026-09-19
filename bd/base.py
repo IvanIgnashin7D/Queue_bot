@@ -1,10 +1,14 @@
 from datetime import datetime
+from pathlib import Path
 
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-engine = create_async_engine("sqlite+aiosqlite:///bot.db", echo=False)
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = BASE_DIR / "bot.db"
+
+engine = create_async_engine(f"sqlite+aiosqlite:///{DB_PATH.as_posix()}", echo=False)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
 
