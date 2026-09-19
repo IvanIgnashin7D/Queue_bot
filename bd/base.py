@@ -1,4 +1,6 @@
-from sqlalchemy import BigInteger, ForeignKey, Integer, String, event
+from datetime import datetime
+
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -15,7 +17,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 async def init_db():
     async with engine.begin() as conn:
-        # await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
 
 
@@ -34,6 +36,8 @@ class Queue(Model):
     topic_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     creator_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     message_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    open_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    name: Mapped[str | None] = mapped_column(String(30), nullable=True)
 
 
 class User(Model):

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import delete, select, update
 
 from bd.base import Admin, Base, Queue, User, async_session, engine
@@ -10,12 +12,22 @@ async def init_db():
 
 
 async def create_new_queue(
-    chat_id: int, creator_id: int, topic_id: int | None = None
+    chat_id: int,
+    creator_id: int,
+    open_time: datetime,
+    name: str,
+    topic_id: int | None = None,
 ) -> Queue:
     async with async_session() as session:
         existing_queue = await get_queue_by_chat(chat_id=chat_id, topic_id=topic_id)
         if not existing_queue:
-            new_queue = Queue(chat_id=chat_id, topic_id=topic_id, creator_id=creator_id)
+            new_queue = Queue(
+                chat_id=chat_id,
+                topic_id=topic_id,
+                creator_id=creator_id,
+                open_time=open_time,
+                name=name,
+            )
             session.add(new_queue)
             await session.commit()
             await session.refresh(new_queue)

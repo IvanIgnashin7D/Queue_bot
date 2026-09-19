@@ -32,28 +32,37 @@ async def command_start_handler(message: Message) -> None:
 
 @router.message(Command("new_queue"))
 async def new_queue_handler(message: Message):
-    args = message.text.split(maxsplit=2)
-    if len(args) < 3:
-        await message.reply("Формат: <code>/new_queue ГГГГ-ММ-ДД ЧЧ:ММ</code>")
+    args = message.text.split(maxsplit=3)
+    if len(args) < 4:
+        await message.reply(
+            "Формат: <code>/new_queue ГГГГ-ММ-ДД ЧЧ:ММ имя</code>\n"
+            "Пример: <code>/new_queue 2026-09-23 14:00 лаба 1</code>"
+        )
         return
 
+    date_part = args[1]
+    time_part = args[2]
+    name = args[3].strip()
+
     try:
-        target_dt = datetime.strptime(f"{args[1]} {args[2]}", "%Y-%m-%d %H:%M")  # noqa: DTZ007
+        target_dt = datetime.strptime(f"{date_part} {time_part}", "%Y-%m-%d %H:%M")  # noqa: DTZ007
     except ValueError:
         await message.reply("Неверный формат даты/времени!")
         return
+
+    open_time = calculate_random_open_time(target_dt)
 
     queue = await create_new_queue(
         chat_id=message.chat.id,
         creator_id=message.from_user.id,
         topic_id=message.message_thread_id,
+        open_time=open_time,
+        name=name,
     )
 
     if not queue:
         await message.reply("Очередь уже существует")
         return
-
-    open_time = calculate_random_open_time(target_dt)
 
     scheduler.add_job(
         publish_queue_job,
@@ -61,7 +70,7 @@ async def new_queue_handler(message: Message):
         run_date=open_time,
         kwargs={
             "message": message,
-            "queue_id": queue.id,
+            "queue": queue,
         },
     )
 
@@ -70,17 +79,19 @@ async def new_queue_handler(message: Message):
     )
 
 
-async def publish_queue_job(message: Message, queue_id: int):
+async def publish_queue_job(message: Message, queue: int):
     text = (
-        "<b>Запись в очередь открыта!</b>\n\nСписок участников:\n<i>Пока никого нет</i>"
+        "<b>Запись в очередь открыта!</b>\n\n"
+        f"<i>{queue.name}</i>\n\n"
+        "Список участников:\n<i>Пока никого нет</i>"
     )
 
     msg = await message.answer(
         text=text,
-        reply_markup=create_kb_queue(queue_id),
+        reply_markup=create_kb_queue(queue.id),
         parse_mode="HTML",
     )
-    await update_queue_message_id(id=queue_id, message_id=msg.message_id)
+    await update_queue_message_id(id=queue.id, message_id=msg.message_id)
     await msg.pin(disable_notification=True)
 
 

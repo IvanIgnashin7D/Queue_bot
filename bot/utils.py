@@ -1,7 +1,7 @@
 import random
 from datetime import datetime, timedelta
 
-from bd.stmt import get_admins, get_queue_members
+from bd.stmt import get_admins, get_queue_by_id, get_queue_members
 
 
 def calculate_random_open_time(target_dt: datetime) -> datetime:
@@ -25,10 +25,15 @@ def calculate_random_open_time(target_dt: datetime) -> datetime:
 
 async def create_new_text(queue_id: int) -> str:
     actual_members = await get_queue_members(queue_id=queue_id)
+    queue = await get_queue_by_id(id=queue_id)
     members_text = "\n".join(
         [f"{m.position}. @{m.username} {m.first_name or ''}" for m in actual_members]
     )
-    new_text = f"<b>Запись в очередь открыта!</b>\n\nСписок участников:\n{members_text}"
+    new_text = (
+        "<b>Запись в очередь открыта!</b>\n\n"
+        f"<i>{queue.name}</i>\n\n"
+        f"Список участников:\n{members_text}"
+    )
     return new_text
 
 
