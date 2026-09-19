@@ -16,7 +16,7 @@ from bd.stmt import (
     get_queues_by_chat,
     get_user,
     move_queue,
-    update_queue_message_id_and_open,
+    update_queue_message_id,
 )
 from bot.keyboards import create_kb_delete_queue, create_kb_queue
 from bot.utils import (
@@ -59,7 +59,12 @@ async def new_queue_handler(message: Message):
         await message.reply("Неверный формат даты/времени!")
         return
 
+    if not await check_admin_status(message.from_user.id):
+        await message.reply("Создавать очередь могут только админы")
+        return
+
     open_time = calculate_random_open_time(target_dt)
+    display_date = open_time[0].strftime("%Y-%m-%d")
 
     queue = await create_new_queue(
         chat_id=message.chat.id,
@@ -84,7 +89,7 @@ async def new_queue_handler(message: Message):
     )
 
     await message.reply(
-        f"Очередь создана! Запись откроется случайным образом {date_part} c {open_time[0].strftime('%H:%M')} до {max(open_time[1], target_dt).strftime('%H:%M')}."
+        f"Очередь создана! Запись откроется случайным образом {display_date} c {open_time[0].strftime('%H:%M')} до {max(open_time[1], target_dt).strftime('%H:%M')}."
     )
 
 
@@ -100,7 +105,7 @@ async def publish_queue_job(message: Message, queue: Queue):
         reply_markup=create_kb_queue(queue.id),
         parse_mode="HTML",
     )
-    await update_queue_message_id_and_open(id=queue.id, message_id=msg.message_id)
+    await update_queue_message_id(id=queue.id, message_id=msg.message_id)
     await msg.pin(disable_notification=True)
 
 
@@ -201,7 +206,9 @@ async def move_queue_handler(callback_query):
         return
 
     queue_id = int(callback_query.data.split("_")[2])
-    await move_queue(id=queue_id)
+    if not await move_queue(id=queue_id):
+        await callback_query.answer("Очередь пуста", show_alert=True)
+        return
 
     new_text = await create_new_text(queue_id=queue_id)
     try:
@@ -215,7 +222,7 @@ async def move_queue_handler(callback_query):
         pass
 
 
-@router.message(Command("get_all_queues"))
+@router.message(Command("get_all_queues@polyqueue6_bot"))
 async def get_all_queues(message: Message):
     queues = await get_queues_by_chat(
         chat_id=message.chat.id, topic_id=message.message_thread_id

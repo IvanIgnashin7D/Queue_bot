@@ -147,18 +147,20 @@ async def delete_user(tg_id: int, queue_id: int) -> User:
             return user_to_delete
 
 
-async def move_queue(id: int):
+async def move_queue(id: int) -> bool:
     async with async_session() as session:
         queue_members = await get_queue_members(id)
 
         if len(queue_members) >= 1:
             await delete_user(queue_members[0].tg_id, id)
             await session.commit()
+            return True
+        return False
 
 
-async def update_queue_message_id_and_open(id: int, message_id: int):
+async def update_queue_message_id(id: int, message_id: int):
     async with async_session() as session:
-        stmt = update(Queue).filter_by(id=id).values(message_id=message_id, opened=True)
+        stmt = update(Queue).filter_by(id=id).values(message_id=message_id)
         await session.execute(stmt)
         await session.commit()
 
