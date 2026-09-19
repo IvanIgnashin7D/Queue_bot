@@ -69,7 +69,7 @@ async def new_queue_handler(message: Message):
         chat_id=message.chat.id,
         creator_id=message.from_user.id,
         topic_id=message.message_thread_id,
-        open_time=open_time[open_time[1]],
+        open_time=open_time[1],
         name=name,
     )
 
