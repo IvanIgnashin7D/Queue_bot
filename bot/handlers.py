@@ -222,7 +222,7 @@ async def move_queue_handler(callback_query):
         pass
 
 
-@router.message(Command("get_all_queues@polyqueue6_bot"))
+@router.message(Command("get_all_queues"))
 async def get_all_queues(message: Message):
     queues = await get_queues_by_chat(
         chat_id=message.chat.id, topic_id=message.message_thread_id
