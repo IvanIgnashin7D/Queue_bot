@@ -90,6 +90,13 @@ async def get_queue_by_chat_and_name(
         return None
 
 
+async def get_pending_queues() -> list[Queue]:
+    async with async_session() as session:
+        stmt = select(Queue).filter(Queue.message_id.is_(None))
+        queues = await session.scalars(stmt)
+        return list(queues.all())
+
+
 async def get_users():
     async with async_session() as session:
         stmt = select(User)

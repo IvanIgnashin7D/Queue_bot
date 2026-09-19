@@ -1,12 +1,11 @@
 from datetime import datetime
 
-from aiogram import F, Router
+from aiogram import Bot, F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from bd.base import Queue
 from bd.stmt import (
     add_user,
     create_new_queue,
@@ -70,7 +69,7 @@ async def new_queue_handler(message: Message):
         chat_id=message.chat.id,
         creator_id=message.from_user.id,
         topic_id=message.message_thread_id,
-        open_time=target_dt,
+        open_time=open_time[open_time[1]],
         name=name,
     )
 
@@ -83,8 +82,8 @@ async def new_queue_handler(message: Message):
         trigger="date",
         run_date=open_time[1],
         kwargs={
-            "message": message,
-            "queue": queue,
+            "bot": message.bot,  # aiogram позволяет достать bot из message
+            "queue_id": queue.id,  # Передаем только ID, а не весь объект Queue
         },
     )
 
@@ -93,18 +92,27 @@ async def new_queue_handler(message: Message):
     )
 
 
-async def publish_queue_job(message: Message, queue: Queue):
+async def publish_queue_job(bot: Bot, queue_id: int):
+    queue = await get_queue_by_id(id=queue_id)
+    if not queue or queue.message_id:
+        return
+
     text = (
         "<b>Запись в очередь открыта!</b>\n\n"
         f"<i>{queue.name}</i>\n\n"
         "Список участников:\n<i>Пока никого нет</i>"
     )
 
-    msg = await message.answer(
-        text=text,
-        reply_markup=create_kb_queue(queue.id),
-        parse_mode="HTML",
-    )
+    kwargs = {
+        "chat_id": queue.chat_id,
+        "text": text,
+        "reply_markup": create_kb_queue(queue.id),
+        "parse_mode": "HTML",
+    }
+    if queue.topic_id:
+        kwargs["message_thread_id"] = queue.topic_id
+
+    msg = await bot.send_message(**kwargs)
     await update_queue_message_id(id=queue.id, message_id=msg.message_id)
     await msg.pin(disable_notification=True)
 

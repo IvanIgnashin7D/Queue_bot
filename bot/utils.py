@@ -42,7 +42,7 @@ def create_queue_info_text(queue: Queue) -> str:
     new_text = (
         f"Очередь: <b>{queue.name}</b>\n"
         f"Статус: {'Открыта' if queue.message_id else 'Закрыта'}\n"
-        f"{f'Откроется к {queue.open_time.strftime('%Y-%m-%d %H:%M')}' if not queue.message_id else ''}"
+        f"{f'Откроется {queue.open_time.strftime('%Y-%m-%d')}' if not queue.message_id else ''}"
     )
     return new_text
 
