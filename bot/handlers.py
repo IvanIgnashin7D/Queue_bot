@@ -10,12 +10,18 @@ from bd.stmt import (
     create_new_queue,
     delete_queue,
     delete_user,
+    get_queues_by_chat,
     get_user,
     move_queue,
-    update_queue_message_id,
+    update_queue_message_id_and_open,
 )
 from bot.keyboards import create_kb_queue
-from bot.utils import calculate_random_open_time, check_admin_status, create_new_text
+from bot.utils import (
+    calculate_random_open_time,
+    check_admin_status,
+    create_new_text,
+    create_queue_info_text,
+)
 
 router = Router()
 scheduler = AsyncIOScheduler()
@@ -56,18 +62,19 @@ async def new_queue_handler(message: Message):
         chat_id=message.chat.id,
         creator_id=message.from_user.id,
         topic_id=message.message_thread_id,
-        open_time=open_time,
+        open_time=open_time[1],
         name=name,
+        opened=False,
     )
 
     if not queue:
-        await message.reply("Очередь уже существует")
+        await message.reply("Очередь с таким названием уцже существует")
         return
 
     scheduler.add_job(
         publish_queue_job,
         trigger="date",
-        run_date=open_time,
+        run_date=open_time[1],
         kwargs={
             "message": message,
             "queue": queue,
@@ -75,7 +82,7 @@ async def new_queue_handler(message: Message):
     )
 
     await message.reply(
-        f"Очередь создана! Запись откроется случайным образом до {target_dt.strftime('%H:%M')}."
+        f"Очередь создана! Запись откроется случайным образом {date_part} c {open_time[0].strftime('%H:%M')} до {max(open_time[1], target_dt).strftime('%H:%M')}."
     )
 
 
@@ -91,7 +98,7 @@ async def publish_queue_job(message: Message, queue: int):
         reply_markup=create_kb_queue(queue.id),
         parse_mode="HTML",
     )
-    await update_queue_message_id(id=queue.id, message_id=msg.message_id)
+    await update_queue_message_id_and_open(id=queue.id, message_id=msg.message_id)
     await msg.pin(disable_notification=True)
 
 
@@ -165,6 +172,12 @@ async def delete_queue_handler(callback_query):
 
 @router.callback_query(F.data.startswith("move_queue_"))
 async def move_queue_handler(callback_query):
+    if not await check_admin_status(callback_query.from_user.id):
+        await callback_query.answer(
+            "Двигать очередь могут только админы", show_alert=True
+        )
+        return
+
     queue_id = int(callback_query.data.split("_")[2])
     await move_queue(id=queue_id)
 
@@ -178,3 +191,17 @@ async def move_queue_handler(callback_query):
         await callback_query.answer("Очередь продвинута", show_alert=True)
     except Exception:  # noqa: BLE001, S110
         pass
+
+
+@router.message(Command("get_all_queues"))
+async def get_all_queues(message: Message):
+    queues = await get_queues_by_chat(
+        chat_id=message.chat.id, topic_id=message.message_thread_id
+    )
+    if not queues:
+        await message.reply("В этой теме нет очередей")
+        return
+
+    for queue in queues:
+        text = create_queue_info_text(queue)
+        await message.answer(text=text)

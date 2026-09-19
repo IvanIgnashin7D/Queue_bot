@@ -1,14 +1,15 @@
 import random
 from datetime import datetime, timedelta
 
+from bd.base import Queue
 from bd.stmt import get_admins, get_queue_by_id, get_queue_members
 
 
-def calculate_random_open_time(target_dt: datetime) -> datetime:
+def calculate_random_open_time(target_dt: datetime) -> list[datetime]:
     now = datetime.now()  # noqa: DTZ005
 
     if target_dt <= now:
-        return now + timedelta(seconds=5)
+        return [now + timedelta(seconds=5), now + timedelta(seconds=5)]
 
     ideal_start = target_dt - timedelta(hours=2)
 
@@ -17,10 +18,10 @@ def calculate_random_open_time(target_dt: datetime) -> datetime:
     total_seconds = int((target_dt - start_window).total_seconds())
 
     if total_seconds <= 10:
-        return now + timedelta(seconds=5)
+        return [now + timedelta(seconds=5), now + timedelta(seconds=5)]
 
     random_seconds = random.randint(0, total_seconds)
-    return start_window + timedelta(seconds=random_seconds)
+    return [start_window, start_window + timedelta(seconds=random_seconds)]
 
 
 async def create_new_text(queue_id: int) -> str:
@@ -33,6 +34,15 @@ async def create_new_text(queue_id: int) -> str:
         "<b>Запись в очередь открыта!</b>\n\n"
         f"<i>{queue.name}</i>\n\n"
         f"Список участников:\n{members_text}"
+    )
+    return new_text
+
+
+def create_queue_info_text(queue: Queue) -> str:
+    new_text = (
+        f"Очередь: <b>{queue.name}</b>\n"
+        f"Статус: {'Открыта' if queue.opened else 'Закрыта'}\n"
+        f"{f'Откроется с {queue.open_time.strftime('%H:%M')}' if not queue.opened else ''}"
     )
     return new_text
 

@@ -16,23 +16,27 @@ async def create_new_queue(
     creator_id: int,
     open_time: datetime,
     name: str,
+    opened: bool,
     topic_id: int | None = None,
 ) -> Queue:
     async with async_session() as session:
-        existing_queue = await get_queue_by_chat(chat_id=chat_id, topic_id=topic_id)
-        if not existing_queue:
-            new_queue = Queue(
-                chat_id=chat_id,
-                topic_id=topic_id,
-                creator_id=creator_id,
-                open_time=open_time,
-                name=name,
-            )
-            session.add(new_queue)
-            await session.commit()
-            await session.refresh(new_queue)
-            return new_queue
-        return None
+        existing_queue = await get_queue_by_chat_and_name(
+            name=name, chat_id=chat_id, topic_id=topic_id
+        )
+        if existing_queue:
+            return None
+        new_queue = Queue(
+            chat_id=chat_id,
+            topic_id=topic_id,
+            creator_id=creator_id,
+            open_time=open_time,
+            name=name,
+            opened=opened,
+        )
+        session.add(new_queue)
+        await session.commit()
+        await session.refresh(new_queue)
+        return new_queue
 
 
 async def add_user(
@@ -67,20 +71,31 @@ async def get_queue_members(queue_id: int) -> list[User]:
         return queue_members.all()
 
 
-async def get_queue_by_chat(chat_id: int, topic_id: int | None = None) -> Queue:
+async def get_queues_by_chat(chat_id: int, topic_id: int | None = None) -> list[Queue]:
     async with async_session() as session:
         stmt = select(Queue).filter_by(chat_id=chat_id, topic_id=topic_id)
-        queue = await session.scalars(stmt)
-        if queue:
-            return queue.first()
-        return None
+        queues = await session.scalars(stmt)
+        return list(queues.all())
 
 
 async def get_queue_by_id(id: int) -> Queue:
     async with async_session() as session:
         stmt = select(Queue).filter_by(id=id)
         queue = await session.scalars(stmt)
-        return queue.first()
+        if queue:
+            return queue.first()
+        return None
+
+
+async def get_queue_by_chat_and_name(
+    name: str, chat_id: int, topic_id: int | None = None
+):
+    async with async_session() as session:
+        stmt = select(Queue).filter_by(name=name, chat_id=chat_id, topic_id=topic_id)
+        queue = await session.scalars(stmt)
+        if queue:
+            return queue.first()
+        return None
 
 
 async def get_users():
@@ -143,9 +158,9 @@ async def move_queue(id: int):
             await session.commit()
 
 
-async def update_queue_message_id(id: int, message_id: int):
+async def update_queue_message_id_and_open(id: int, message_id: int):
     async with async_session() as session:
-        stmt = update(Queue).filter_by(id=id).values(message_id=message_id)
+        stmt = update(Queue).filter_by(id=id).values(message_id=message_id, opened=True)
         await session.execute(stmt)
         await session.commit()
 
